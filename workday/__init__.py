@@ -2,6 +2,7 @@
 
 from .orchestration import (
     WorkdayConfig,
+    WorkdayEvent,
     WorkdayPlan,
     WorkdaySegment,
     build_workday_plan,
@@ -11,6 +12,7 @@ from .orchestration import (
 
 __all__ = [
     "WorkdayConfig",
+    "WorkdayEvent",
     "WorkdayPlan",
     "WorkdaySegment",
     "build_workday_plan",

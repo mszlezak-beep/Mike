@@ -10,12 +10,14 @@ Install the project dependencies and then run one of the invoke tasks:
 python3 -m pip install -e ".[dev]"
 python3 -m invoke workday.run
 python3 -m invoke workday.extend --minutes 45
+python3 -m invoke workday.extend --minutes 45 --page-onload-event workday.extend.onload
 ```
 
 ## Available tasks
 
 - `python3 -m invoke workday.run`: build a workday plan from a start time and run length
 - `python3 -m invoke workday.extend`: extend the base workday by additional minutes
+  (optionally include `--page-onload-event` to emit an onload event in output)
 
 Both tasks print a human-readable schedule by default and can emit JSON with
 `--json-output`.

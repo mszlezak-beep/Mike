@@ -64,6 +64,7 @@ def run(
         "start": "Start time in HH:MM format",
         "hours": "Base run length in hours before the extension",
         "minutes": "Additional work minutes to append to the run",
+        "page_onload_event": "Event name emitted at page onload in the extended plan",
         "focus": "Length of each focus block in minutes",
         "short_break": "Break length between focus blocks",
         "lunch": "Lunch break length in minutes",
@@ -76,6 +77,7 @@ def extend(
     start: str = "09:00",
     hours: float = 8,
     minutes: int = 30,
+    page_onload_event: str = "",
     focus: int = 50,
     short_break: int = 10,
     lunch: int = 30,
@@ -91,7 +93,8 @@ def extend(
         lunch=lunch,
         lunch_after=lunch_after,
     )
-    extended_config = extend_workday_run(config, minutes)
+    event_name = page_onload_event or None
+    extended_config = extend_workday_run(config, minutes, page_onload_event=event_name)
     plan = build_workday_plan(extended_config)
     print(plan.to_json() if json_output else render_plan(plan))
 
