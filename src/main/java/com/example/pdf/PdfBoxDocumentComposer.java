@@ -40,7 +40,8 @@ public final class PdfBoxDocumentComposer {
      * @param newPages pages to append after the merged source PDFs
      * @return the complete PDF document as bytes
      */
-    public byte[] mergeAndAppendPages(List<byte[]> sourcePdfs, List<NewPage> newPages) throws IOException {
+    public byte[] mergeAndAppendPages(List<byte[]> sourcePdfs, List<? extends com.example.pdf.NewPage> newPages)
+            throws IOException {
         Objects.requireNonNull(sourcePdfs, "sourcePdfs must not be null");
         Objects.requireNonNull(newPages, "newPages must not be null");
 
@@ -49,7 +50,7 @@ public final class PdfBoxDocumentComposer {
         }
 
         try (PDDocument document = loadMergedSources(sourcePdfs)) {
-            for (NewPage page : newPages) {
+            for (com.example.pdf.NewPage page : newPages) {
                 appendPage(document, page);
             }
 
@@ -69,7 +70,9 @@ public final class PdfBoxDocumentComposer {
      * @param newPages pages to append after the merged source PDFs
      * @return the complete PDF document as bytes
      */
-    public byte[] mergeBase64PdfsAndAppendPages(List<String> sourcePdfBase64, List<NewPage> newPages)
+    public byte[] mergeBase64PdfsAndAppendPages(
+            List<String> sourcePdfBase64,
+            List<? extends com.example.pdf.NewPage> newPages)
             throws IOException {
         Objects.requireNonNull(sourcePdfBase64, "sourcePdfBase64 must not be null");
 
@@ -82,7 +85,9 @@ public final class PdfBoxDocumentComposer {
     /**
      * Merges existing Base64-encoded PDF documents, appends pages, and returns the result as Base64.
      */
-    public String mergeBase64PdfsAndAppendPagesAsBase64(List<String> sourcePdfBase64, List<NewPage> newPages)
+    public String mergeBase64PdfsAndAppendPagesAsBase64(
+            List<String> sourcePdfBase64,
+            List<? extends com.example.pdf.NewPage> newPages)
             throws IOException {
         return Base64.getEncoder().encodeToString(mergeBase64PdfsAndAppendPages(sourcePdfBase64, newPages));
     }
@@ -90,7 +95,10 @@ public final class PdfBoxDocumentComposer {
     /**
      * Merges PDFs from disk, appends generated pages, and writes the output PDF.
      */
-    public void mergeAndAppendPages(List<Path> sourcePdfPaths, Path outputPdfPath, List<NewPage> newPages)
+    public void mergeAndAppendPages(
+            List<Path> sourcePdfPaths,
+            Path outputPdfPath,
+            List<? extends com.example.pdf.NewPage> newPages)
             throws IOException {
         Objects.requireNonNull(sourcePdfPaths, "sourcePdfPaths must not be null");
         Objects.requireNonNull(outputPdfPath, "outputPdfPath must not be null");
@@ -113,7 +121,7 @@ public final class PdfBoxDocumentComposer {
     public void mergeBase64PdfsAndAppendPagesToFile(
             List<String> sourcePdfBase64,
             Path outputPdfPath,
-            List<NewPage> newPages) throws IOException {
+            List<? extends com.example.pdf.NewPage> newPages) throws IOException {
         Objects.requireNonNull(outputPdfPath, "outputPdfPath must not be null");
 
         byte[] output = mergeBase64PdfsAndAppendPages(sourcePdfBase64, newPages);
@@ -153,7 +161,7 @@ public final class PdfBoxDocumentComposer {
         }
     }
 
-    private static void appendPage(PDDocument document, NewPage newPage) throws IOException {
+    private static void appendPage(PDDocument document, com.example.pdf.NewPage newPage) throws IOException {
         Objects.requireNonNull(newPage, "newPage must not be null");
 
         PDPage page = new PDPage(PDRectangle.LETTER);
@@ -163,7 +171,7 @@ public final class PdfBoxDocumentComposer {
         try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
             drawHeader(contentStream, newPage.headerText(), mediaBox);
 
-            for (Base64Image image : newPage.images()) {
+            for (com.example.pdf.Base64Image image : newPage.images()) {
                 drawImage(document, contentStream, image);
             }
         }
@@ -182,7 +190,10 @@ public final class PdfBoxDocumentComposer {
         contentStream.endText();
     }
 
-    private static void drawImage(PDDocument document, PDPageContentStream contentStream, Base64Image image)
+    private static void drawImage(
+            PDDocument document,
+            PDPageContentStream contentStream,
+            com.example.pdf.Base64Image image)
             throws IOException {
         Objects.requireNonNull(image, "image must not be null");
 
@@ -221,17 +232,23 @@ public final class PdfBoxDocumentComposer {
         }
     }
 
-    public record NewPage(String headerText, List<Base64Image> images) {
-        public NewPage {
-            images = List.copyOf(Objects.requireNonNull(images, "images must not be null"));
+    /**
+     * @deprecated Prefer importing and using {@link com.example.pdf.NewPage} directly.
+     */
+    @Deprecated(since = "1.0.0", forRemoval = false)
+    public static class NewPage extends com.example.pdf.NewPage {
+        public NewPage(String headerText, List<? extends com.example.pdf.Base64Image> images) {
+            super(headerText, images);
         }
     }
 
-    public record Base64Image(String base64, float x, float y, float width, float height) {
-        public Base64Image {
-            if (width <= 0.0F || height <= 0.0F) {
-                throw new IllegalArgumentException("Image width and height must be positive.");
-            }
+    /**
+     * @deprecated Prefer importing and using {@link com.example.pdf.Base64Image} directly.
+     */
+    @Deprecated(since = "1.0.0", forRemoval = false)
+    public static class Base64Image extends com.example.pdf.Base64Image {
+        public Base64Image(String base64, float x, float y, float width, float height) {
+            super(base64, x, y, width, height);
         }
     }
 }

@@ -33,9 +33,9 @@ class PdfBoxDocumentComposerTest {
         byte[] firstPdf = onePagePdf("First source PDF");
         byte[] secondPdf = onePagePdf("Second source PDF");
         String imageBase64 = onePixelPngBase64();
-        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+        NewPage newPage = new NewPage(
                 "Header test",
-                List.of(new PdfBoxDocumentComposer.Base64Image(imageBase64, 72.0F, 500.0F, 64.0F, 64.0F)));
+                List.of(new Base64Image(imageBase64, 72.0F, 500.0F, 64.0F, 64.0F)));
 
         byte[] output = composer.mergeAndAppendPages(List.of(firstPdf, secondPdf), List.of(newPage));
 
@@ -55,9 +55,9 @@ class PdfBoxDocumentComposerTest {
         String firstPdfBase64 = Base64.getEncoder().encodeToString(onePagePdf("First Base64 PDF"));
         String secondPdfBase64 = "data:application/pdf;base64,"
                 + Base64.getEncoder().encodeToString(onePagePdf("Second Base64 PDF"));
-        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+        NewPage newPage = new NewPage(
                 "Header text",
-                List.of(new PdfBoxDocumentComposer.Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 64.0F, 64.0F)));
+                List.of(new Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 64.0F, 64.0F)));
 
         byte[] output = composer.mergeBase64PdfsAndAppendPages(List.of(firstPdfBase64, secondPdfBase64), List.of(newPage));
 
@@ -75,9 +75,9 @@ class PdfBoxDocumentComposerTest {
     @Test
     void canReturnMergedBase64PdfAsBase64() throws IOException {
         String sourcePdfBase64 = Base64.getEncoder().encodeToString(onePagePdf("Source as Base64"));
-        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+        NewPage newPage = new NewPage(
                 "Generated header",
-                List.of(new PdfBoxDocumentComposer.Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 32.0F, 32.0F)));
+                List.of(new Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 32.0F, 32.0F)));
 
         String outputBase64 = composer.mergeBase64PdfsAndAppendPagesAsBase64(List.of(sourcePdfBase64), List.of(newPage));
 
@@ -92,9 +92,9 @@ class PdfBoxDocumentComposerTest {
     @Test
     void canCreateDocumentFromOnlyNewPages() throws IOException {
         String imageBase64 = onePixelPngBase64();
-        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+        NewPage newPage = new NewPage(
                 "Only generated page",
-                List.of(new PdfBoxDocumentComposer.Base64Image(
+                List.of(new Base64Image(
                         "data:image/png;base64," + imageBase64,
                         72.0F,
                         500.0F,
@@ -106,6 +106,21 @@ class PdfBoxDocumentComposerTest {
         try (PDDocument document = Loader.loadPDF(output)) {
             assertEquals(1, document.getNumberOfPages());
             assertTrue(new PDFTextStripper().getText(document).contains("Only generated page"));
+        }
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void nestedCompatibilityTypesStillWork() throws IOException {
+        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+                "Nested compatibility page",
+                List.of(new PdfBoxDocumentComposer.Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 32.0F, 32.0F)));
+
+        byte[] output = composer.mergeAndAppendPages(List.of(), List.of(newPage));
+
+        try (PDDocument document = Loader.loadPDF(output)) {
+            assertEquals(1, document.getNumberOfPages());
+            assertTrue(new PDFTextStripper().getText(document).contains("Nested compatibility page"));
         }
     }
 

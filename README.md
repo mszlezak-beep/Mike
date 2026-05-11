@@ -11,15 +11,19 @@ Java example code for composing PDFs with Apache PDFBox:
 ## Usage
 
 ```java
+import com.example.pdf.Base64Image;
+import com.example.pdf.NewPage;
+import com.example.pdf.PdfBoxDocumentComposer;
+
 PdfBoxDocumentComposer composer = new PdfBoxDocumentComposer();
 
 List<Path> sources = List.of(
         Path.of("first.pdf"),
         Path.of("second.pdf"));
 
-PdfBoxDocumentComposer.NewPage page = new PdfBoxDocumentComposer.NewPage(
+NewPage page = new NewPage(
         "Header test",
-        List.of(new PdfBoxDocumentComposer.Base64Image(
+        List.of(new Base64Image(
                 base64Png,
                 72.0F,   // x, from left
                 500.0F,  // y, from bottom
