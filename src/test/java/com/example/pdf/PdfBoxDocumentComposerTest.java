@@ -4,9 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -21,8 +25,6 @@ import org.junit.jupiter.api.Test;
 class PdfBoxDocumentComposerTest {
     private static final PDType1Font TEST_FONT =
             new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-    private static final String ONE_PIXEL_PNG =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 
     private final PdfBoxDocumentComposer composer = new PdfBoxDocumentComposer();
 
@@ -30,9 +32,10 @@ class PdfBoxDocumentComposerTest {
     void mergesPdfsAndAppendsPageWithHeaderAndBase64Image() throws IOException {
         byte[] firstPdf = onePagePdf("First source PDF");
         byte[] secondPdf = onePagePdf("Second source PDF");
+        String imageBase64 = onePixelPngBase64();
         PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
                 "Header test",
-                List.of(new PdfBoxDocumentComposer.Base64Image(ONE_PIXEL_PNG, 72.0F, 500.0F, 64.0F, 64.0F)));
+                List.of(new PdfBoxDocumentComposer.Base64Image(imageBase64, 72.0F, 500.0F, 64.0F, 64.0F)));
 
         byte[] output = composer.mergeAndAppendPages(List.of(firstPdf, secondPdf), List.of(newPage));
 
@@ -49,10 +52,11 @@ class PdfBoxDocumentComposerTest {
 
     @Test
     void canCreateDocumentFromOnlyNewPages() throws IOException {
+        String imageBase64 = onePixelPngBase64();
         PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
                 "Only generated page",
                 List.of(new PdfBoxDocumentComposer.Base64Image(
-                        "data:image/png;base64," + ONE_PIXEL_PNG,
+                        "data:image/png;base64," + imageBase64,
                         72.0F,
                         500.0F,
                         32.0F,
@@ -88,5 +92,14 @@ class PdfBoxDocumentComposerTest {
             document.save(output);
             return output.toByteArray();
         }
+    }
+
+    private static String onePixelPngBase64() throws IOException {
+        BufferedImage image = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        image.setRGB(0, 0, 0xFF000000);
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        return Base64.getEncoder().encodeToString(output.toByteArray());
     }
 }
