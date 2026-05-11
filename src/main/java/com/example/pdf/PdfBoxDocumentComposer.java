@@ -1,16 +1,17 @@
 package com.example.pdf;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -84,18 +85,27 @@ public final class PdfBoxDocumentComposer {
         }
 
         PDFMergerUtility merger = new PDFMergerUtility();
+        List<RandomAccessReadBuffer> randomAccessSources = new ArrayList<>();
         ByteArrayOutputStream mergedOutput = new ByteArrayOutputStream();
         merger.setDestinationStream(mergedOutput);
 
-        for (byte[] sourcePdf : sourcePdfs) {
-            if (sourcePdf == null || sourcePdf.length == 0) {
-                throw new IllegalArgumentException("Source PDFs must not be null or empty.");
+        try {
+            for (byte[] sourcePdf : sourcePdfs) {
+                if (sourcePdf == null || sourcePdf.length == 0) {
+                    throw new IllegalArgumentException("Source PDFs must not be null or empty.");
+                }
+                RandomAccessReadBuffer source = new RandomAccessReadBuffer(sourcePdf);
+                randomAccessSources.add(source);
+                merger.addSource(source);
             }
-            merger.addSource(new ByteArrayInputStream(sourcePdf));
-        }
 
-        merger.mergeDocuments(IOUtils.createMemoryOnlyStreamCache());
-        return Loader.loadPDF(mergedOutput.toByteArray());
+            merger.mergeDocuments(IOUtils.createMemoryOnlyStreamCache());
+            return Loader.loadPDF(mergedOutput.toByteArray());
+        } finally {
+            for (RandomAccessReadBuffer source : randomAccessSources) {
+                source.close();
+            }
+        }
     }
 
     private static void appendPage(PDDocument document, NewPage newPage) throws IOException {
