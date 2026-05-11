@@ -51,6 +51,45 @@ class PdfBoxDocumentComposerTest {
     }
 
     @Test
+    void mergesBase64PdfsAndAppendsPageWithHeaderAndBase64Image() throws IOException {
+        String firstPdfBase64 = Base64.getEncoder().encodeToString(onePagePdf("First Base64 PDF"));
+        String secondPdfBase64 = "data:application/pdf;base64,"
+                + Base64.getEncoder().encodeToString(onePagePdf("Second Base64 PDF"));
+        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+                "Header text",
+                List.of(new PdfBoxDocumentComposer.Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 64.0F, 64.0F)));
+
+        byte[] output = composer.mergeBase64PdfsAndAppendPages(List.of(firstPdfBase64, secondPdfBase64), List.of(newPage));
+
+        try (PDDocument document = Loader.loadPDF(output)) {
+            assertEquals(3, document.getNumberOfPages());
+
+            String text = new PDFTextStripper().getText(document);
+            assertTrue(text.contains("First Base64 PDF"));
+            assertTrue(text.contains("Second Base64 PDF"));
+            assertTrue(text.contains("Header text"));
+            assertTrue(document.getPage(2).getResources().getXObjectNames().iterator().hasNext());
+        }
+    }
+
+    @Test
+    void canReturnMergedBase64PdfAsBase64() throws IOException {
+        String sourcePdfBase64 = Base64.getEncoder().encodeToString(onePagePdf("Source as Base64"));
+        PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(
+                "Generated header",
+                List.of(new PdfBoxDocumentComposer.Base64Image(onePixelPngBase64(), 72.0F, 500.0F, 32.0F, 32.0F)));
+
+        String outputBase64 = composer.mergeBase64PdfsAndAppendPagesAsBase64(List.of(sourcePdfBase64), List.of(newPage));
+
+        try (PDDocument document = Loader.loadPDF(Base64.getDecoder().decode(outputBase64))) {
+            assertEquals(2, document.getNumberOfPages());
+            String text = new PDFTextStripper().getText(document);
+            assertTrue(text.contains("Source as Base64"));
+            assertTrue(text.contains("Generated header"));
+        }
+    }
+
+    @Test
     void canCreateDocumentFromOnlyNewPages() throws IOException {
         String imageBase64 = onePixelPngBase64();
         PdfBoxDocumentComposer.NewPage newPage = new PdfBoxDocumentComposer.NewPage(

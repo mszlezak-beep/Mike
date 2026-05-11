@@ -60,6 +60,34 @@ public final class PdfBoxDocumentComposer {
     }
 
     /**
+     * Merges existing Base64-encoded PDF documents and appends newly generated pages.
+     *
+     * <p>Each PDF may be plain Base64 or a data URI such as
+     * {@code data:application/pdf;base64,...}.</p>
+     *
+     * @param sourcePdfBase64 Base64 PDF documents to merge in order
+     * @param newPages pages to append after the merged source PDFs
+     * @return the complete PDF document as bytes
+     */
+    public byte[] mergeBase64PdfsAndAppendPages(List<String> sourcePdfBase64, List<NewPage> newPages)
+            throws IOException {
+        Objects.requireNonNull(sourcePdfBase64, "sourcePdfBase64 must not be null");
+
+        List<byte[]> sourcePdfs = sourcePdfBase64.stream()
+                .map(PdfBoxDocumentComposer::decodeBase64Pdf)
+                .toList();
+        return mergeAndAppendPages(sourcePdfs, newPages);
+    }
+
+    /**
+     * Merges existing Base64-encoded PDF documents, appends pages, and returns the result as Base64.
+     */
+    public String mergeBase64PdfsAndAppendPagesAsBase64(List<String> sourcePdfBase64, List<NewPage> newPages)
+            throws IOException {
+        return Base64.getEncoder().encodeToString(mergeBase64PdfsAndAppendPages(sourcePdfBase64, newPages));
+    }
+
+    /**
      * Merges PDFs from disk, appends generated pages, and writes the output PDF.
      */
     public void mergeAndAppendPages(List<Path> sourcePdfPaths, Path outputPdfPath, List<NewPage> newPages)
@@ -72,6 +100,23 @@ public final class PdfBoxDocumentComposer {
                 .toList();
         byte[] output = mergeAndAppendPages(sourcePdfs, newPages);
 
+        Path parent = outputPdfPath.toAbsolutePath().getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        Files.write(outputPdfPath, output);
+    }
+
+    /**
+     * Merges Base64-encoded PDFs, appends generated pages, and writes the output PDF.
+     */
+    public void mergeBase64PdfsAndAppendPagesToFile(
+            List<String> sourcePdfBase64,
+            Path outputPdfPath,
+            List<NewPage> newPages) throws IOException {
+        Objects.requireNonNull(outputPdfPath, "outputPdfPath must not be null");
+
+        byte[] output = mergeBase64PdfsAndAppendPages(sourcePdfBase64, newPages);
         Path parent = outputPdfPath.toAbsolutePath().getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -146,12 +191,20 @@ public final class PdfBoxDocumentComposer {
         contentStream.drawImage(pdImage, image.x(), image.y(), image.width(), image.height());
     }
 
+    private static byte[] decodeBase64Pdf(String base64Pdf) {
+        return decodeBase64Content(base64Pdf, "Base64 PDF");
+    }
+
     private static byte[] decodeBase64Image(String base64Image) {
-        if (base64Image == null || base64Image.isBlank()) {
-            throw new IllegalArgumentException("Base64 image must not be null or blank.");
+        return decodeBase64Content(base64Image, "Base64 image");
+    }
+
+    private static byte[] decodeBase64Content(String base64Content, String contentName) {
+        if (base64Content == null || base64Content.isBlank()) {
+            throw new IllegalArgumentException(contentName + " must not be null or blank.");
         }
 
-        String normalized = base64Image.trim();
+        String normalized = base64Content.trim();
         int dataUriSeparator = normalized.indexOf(',');
         if (normalized.startsWith("data:") && dataUriSeparator >= 0) {
             normalized = normalized.substring(dataUriSeparator + 1);
