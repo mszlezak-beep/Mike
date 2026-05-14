@@ -26,10 +26,11 @@ data URI such as `data:image/heic;base64,...`.
 
 ## Runtime requirements
 
-The HEIC decoder uses `com.github.gotson.nightmonkeys:imageio-heif`, which requires:
+The HEIC decode step uses the `heif-convert` CLI from libheif and then re-encodes the image in
+Java to a PDFBox 2.x-compatible format.
+
+Required runtime pieces:
 
 - Java 21
-- JVM flags: `--enable-preview --enable-native-access=ALL-UNNAMED`
-- `libheif` installed on the host system
-
-The tests in this repository already set the required JVM flags through Maven Surefire.
+- `heif-convert` available on `PATH`
+- On Ubuntu, install it with `sudo apt-get install libheif-examples`

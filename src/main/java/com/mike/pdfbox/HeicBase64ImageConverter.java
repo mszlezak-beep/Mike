@@ -7,6 +7,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
@@ -19,13 +23,14 @@ import javax.imageio.ImageIO;
  * in PDFBox 2.x: JPEG, PNG, TIFF, GIF, and BMP.
  * </p>
  * <p>
- * The HEIC decoder relies on the NightMonkeys ImageIO plugin, which requires the target JVM to
- * run with {@code --enable-preview --enable-native-access=ALL-UNNAMED} on Java 21.
+ * The HEIC decoder relies on the {@code heif-convert} CLI from libheif. On Ubuntu this is
+ * typically provided by the {@code libheif-examples} package.
  * </p>
  */
 public final class HeicBase64ImageConverter {
 
     private static final String DEFAULT_OUTPUT_FORMAT = "png";
+    private static final String HEIF_CONVERT_COMMAND = "heif-convert";
 
     private static final Map<String, String> FORMAT_ALIASES = Map.of(
             "jpg", "jpeg",
@@ -36,10 +41,6 @@ public final class HeicBase64ImageConverter {
             "gif", "gif",
             "bmp", "bmp"
     );
-
-    static {
-        ImageIO.scanForPlugins();
-    }
 
     private HeicBase64ImageConverter() {
     }
@@ -116,12 +117,56 @@ public final class HeicBase64ImageConverter {
     }
 
     private static BufferedImage decodeHeic(byte[] heicBytes) throws IOException {
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(heicBytes)) {
+        byte[] pngBytes = convertHeicToPng(heicBytes);
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(pngBytes)) {
             BufferedImage image = ImageIO.read(inputStream);
             if (image == null) {
-                throw new IOException("Unable to decode HEIC/HEIF input. Confirm the ImageIO HEIF plugin is available.");
+                throw new IOException("Unable to decode intermediary PNG produced from HEIC input.");
             }
             return image;
+        }
+    }
+
+    private static byte[] convertHeicToPng(byte[] heicBytes) throws IOException {
+        Path inputFile = Files.createTempFile("heic-input-", ".heic");
+        Path outputFile = Files.createTempFile("heic-output-", ".png");
+
+        try {
+            Files.write(inputFile, heicBytes);
+
+            Process process;
+            try {
+                process = new ProcessBuilder(
+                        HEIF_CONVERT_COMMAND,
+                        inputFile.toString(),
+                        outputFile.toString()
+                ).redirectErrorStream(true).start();
+            } catch (IOException exception) {
+                throw new IOException(
+                        "Unable to start heif-convert. Install libheif-examples and ensure heif-convert is on PATH.",
+                        exception
+                );
+            }
+
+            String processOutput;
+            try (InputStream processStream = process.getInputStream()) {
+                processOutput = new String(processStream.readAllBytes(), StandardCharsets.UTF_8);
+            }
+
+            try {
+                int exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    throw new IOException("heif-convert failed with exit code " + exitCode + ": " + processOutput.trim());
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for heif-convert to finish", exception);
+            }
+
+            return Files.readAllBytes(outputFile);
+        } finally {
+            Files.deleteIfExists(inputFile);
+            Files.deleteIfExists(outputFile);
         }
     }
 
